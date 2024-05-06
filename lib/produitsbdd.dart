@@ -2,9 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+import 'login.dart'; 
 import 'package:dio/dio.dart';
-import 'login.dart';
+
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 
@@ -468,31 +468,64 @@ class _AddProductPageState extends State<AddProductPage> {
     super.dispose();
   }
 }
-class CustomNavBar extends StatelessWidget {
+class CustomNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
 
   CustomNavBar({required this.selectedIndex, required this.onItemTapped});
 
   @override
+  _CustomNavBarState createState() => _CustomNavBarState();
+}
+
+class _CustomNavBarState extends State<CustomNavBar> {
+  @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: selectedIndex,
-      onTap: onItemTapped,
+      currentIndex: widget.selectedIndex,
+      onTap: (index) {
+        if (index == 1) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => LogoutPage()), // Naviguer vers la page de déconnexion
+          );
+        } else {
+          widget.onItemTapped(index);
+        }
+      },
       items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
-          label: 'Home',
+          label: 'Accueil',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.business),
-          label: 'Business',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.school),
-          label: 'School',
+          icon: Icon(Icons.power_off),
+          label: 'Déconnexion',
         ),
       ],
+    );
+  }
+}
+
+class LogoutPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Déconnexion'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+           
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Connection()), 
+            );
+          },
+          child: Text('Déconnexion'),
+        ),
+      ),
     );
   }
 }
