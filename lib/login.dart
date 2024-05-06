@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,12 +16,14 @@ class _ConnectionState extends State<Connection> {
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
   String _loginMessage = '';
+  
+  get cookieJar => null;
 
   void _handleLog() async {
     try {
       var client = http.Client();
-      var response = await client.post(
-        Uri.parse('http://localhost:4000/api/user/conn/'),
+     var response = await client.post(
+  Uri.parse('http://localhost:4000/api/user/conn'),
         body: jsonEncode({
           'email': _emailController.text,
           'mdp': _passwordController.text,
@@ -33,6 +37,7 @@ class _ConnectionState extends State<Connection> {
         var data = jsonDecode(response.body);
         var token = data['token'];
         var isAdmin = data['isAdmin'];
+     
 
         SharedPreferences prefs = await SharedPreferences.getInstance();
       

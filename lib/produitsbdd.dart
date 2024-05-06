@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
+
 import 'package:dio/dio.dart';
-import 'login.dart'; // Ajout de l'import manquant
+import 'login.dart';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+
+
 
 class Product {
   final String puid;
@@ -179,34 +182,34 @@ class _ProdbddState extends State<Prodbdd> {
                             ],
                           ),
                         ),
-                     Row(
-  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  children: [
-    Expanded(
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => EditProductPage(
-                product: snapshot.data![index],
-                onUpdate: updateProduct,
-              ),
-            ),
-          );
-        },
-        child: Text('Modifier'),
-      ),
-    ),
-    Expanded(
-      child: ElevatedButton(
-        onPressed: () {
-          deleteProduct(snapshot.data![index].puid);
-        },
-        child: Text('Supprimer'),
-      ),
-    ),
-  ],
-),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => EditProductPage(
+                                        product: snapshot.data![index],
+                                        onUpdate: updateProduct,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('Modifier'),
+                              ),
+                            ),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  deleteProduct(snapshot.data![index].puid);
+                                },
+                                child: Text('Supprimer'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -334,6 +337,7 @@ class _AddProductPageState extends State<AddProductPage> {
   late TextEditingController _prixController;
   late TextEditingController _quantiteController;
   String? _imagePath;
+  late PlatformFile? _pickedFile;
 
   @override
   void initState() {
@@ -343,16 +347,67 @@ class _AddProductPageState extends State<AddProductPage> {
     _prixController = TextEditingController();
     _quantiteController = TextEditingController();
     _imagePath = null;
+    _pickedFile = null;
   }
 
-  Future<String?> pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.getImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      return pickedFile.path;
-    } else {
-      print('No image selected.');
-      return null;
+  Future<void> _pickImage() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _pickedFile = result.files.first;
+        });
+      } else {
+        print('Aucune image sélectionnée.');
+      }
+    } catch (e) {
+      print('Erreur lors de la sélection de l\'image: $e');
+    }
+  }
+
+ Future<void> _addProduct() async {
+    final double? prix = double.tryParse(_prixController.text);
+    final int? quantite = int.tryParse(_quantiteController.text);
+
+    if (prix == null || quantite == null) {
+      print('Prix ou quantité invalide');
+      return;
+    }
+
+    try {
+      if (_pickedFile != null) {
+        String fileName = _pickedFile!.name;
+        List<int> fileBytes = _pickedFile!.bytes!; // Accéder à la propriété bytes
+
+        FormData formData = FormData.fromMap({
+          'nom': _nomController.text,
+          'description': _descriptionController.text,
+          'prix': prix.toString(),
+          'quantite': quantite.toString(),
+          'image': MultipartFile.fromBytes(fileBytes, filename: fileName), // Utiliser fromBytes avec les bytes
+        });
+
+        Response response = await Dio().post(
+          'http://localhost:4000/api/prod/produit',
+          data: formData,
+          options: Options(
+            contentType: 'multipart/form-data',
+          ),
+        );
+
+        if (response.statusCode == 200) {
+          Navigator.pop(context);
+        } else {
+          throw Exception('Échec de l\'ajout du produit');
+        }
+      } else {
+        print('Aucun fichier sélectionné.');
+      }
+    } catch (error) {
+      print('Erreur lors de l\'ajout du produit: $error');
     }
   }
 
@@ -386,22 +441,17 @@ class _AddProductPageState extends State<AddProductPage> {
               decoration: InputDecoration(labelText: 'Quantité'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                _imagePath = await pickImage();
-                setState(() {});
-              },
+              onPressed: _pickImage,
               child: Text('Choisir une image'),
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: () {
-                _addProduct();
-              },
+              onPressed: _addProduct,
               child: Text('Ajouter le produit'),
             ),
-            if (_imagePath != null) ...[
+            if (_pickedFile != null) ...[
               SizedBox(height: 16.0),
-              Text('Image sélectionnée : $_imagePath'),
+              Text('Image sélectionnée : ${_pickedFile!.name}'),
             ],
           ],
         ),
@@ -409,60 +459,6 @@ class _AddProductPageState extends State<AddProductPage> {
     );
   }
 
-Future<void> _addProduct() async {
-  final double? prix = double.tryParse(_prixController.text);
-  final int? quantite = int.tryParse(_quantiteController.text);
-
-  if (prix == null || quantite == null) {
-    print('Prix ou quantité invalide');
-    return;
-  }
-
-  try {
-    FormData formData = FormData.fromMap({
-      'nom': _nomController.text,
-      'description': _descriptionController.text,
-      'prix': prix.toString(),
-      'quantite': quantite.toString(),
-    });
-
-    if (_imagePath != null) {
-      // Handle file upload for non-web platforms
-      if (!kIsWeb) {
-        formData.files.add(MapEntry(
-          'image',
-          await MultipartFile.fromFile(_imagePath!),
-        ));
-      } else {
-        // Handle file upload for web platform
-        // You may need to adjust this part depending on your backend setup
-        // For example, you might need to upload the image to a cloud storage service and provide the URL in the formData
-        formData.fields.add(MapEntry(
-          'image',
-          _imagePath!,
-        ));
-      }
-    }
-
-    
-      Response response = await Dio().post(
-        'http://localhost:4000/api/prod/produit',
-        data: formData,
-        options: Options(
-          contentType: 'multipart/form-data',
-        ),
-      );
-
-
-    if (response.statusCode == 200) {
-      Navigator.pop(context);
-    } else {
-      throw Exception('Failed to add product');
-    }
-  } catch (error) {
-    print('Error adding product: $error');
-  }
-}
   @override
   void dispose() {
     _nomController.dispose();
@@ -472,7 +468,6 @@ Future<void> _addProduct() async {
     super.dispose();
   }
 }
-
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -503,7 +498,5 @@ class CustomNavBar extends StatelessWidget {
 }
 
 void main() {
-  runApp(MaterialApp(
-  
-  ));
+  runApp(MaterialApp());
 }

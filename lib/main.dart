@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login.dart'; 
+import 'login.dart';
 import 'admin.dart';
 import 'produitsbdd.dart';
 
@@ -18,8 +18,10 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => Connection(),
-        '/admin': (context) => Admin(isAdmin: false,),
-        '/produitsbdd' : (context) => Prodbdd(),
+        '/admin': (context) => Admin(
+              isAdmin: false,
+            ),
+        '/produitsbdd': (context) => Prodbdd(),
         '/home': (context) => Prodbdd(),
       },
     );
