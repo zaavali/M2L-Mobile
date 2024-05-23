@@ -250,6 +250,8 @@ class _EditProductPageState extends State<EditProductPage> {
   late TextEditingController _descriptionController;
   late TextEditingController _prixController;
   late TextEditingController _quantiteController;
+  String? _imagePath;
+  late PlatformFile? _pickedFile;
 
   @override
   void initState() {
@@ -261,6 +263,8 @@ class _EditProductPageState extends State<EditProductPage> {
         TextEditingController(text: widget.product.prix.toString());
     _quantiteController =
         TextEditingController(text: widget.product.quantite.toString());
+    _imagePath = widget.product.img;
+    _pickedFile = null;
   }
 
   @override
@@ -293,6 +297,18 @@ class _EditProductPageState extends State<EditProductPage> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: 'Quantité'),
               ),
+              ElevatedButton(
+                onPressed: _pickImage,
+                child: Text('Choisir une image'),
+              ),
+              SizedBox(height: 16.0),
+              if (_imagePath != null)
+                Image.network(
+                  'http://localhost:4000/$_imagePath',
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                ),
               SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: () {
@@ -302,7 +318,7 @@ class _EditProductPageState extends State<EditProductPage> {
                     description: _descriptionController.text,
                     prix: double.parse(_prixController.text),
                     quantite: int.parse(_quantiteController.text),
-                    img: widget.product.img,
+                    img: _imagePath ?? widget.product.img,
                   );
                   widget.onUpdate(updatedProduct);
                   Navigator.of(context).pop();
@@ -316,6 +332,24 @@ class _EditProductPageState extends State<EditProductPage> {
     );
   }
 
+Future<void> _pickImage() async {
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      setState(() {
+        _pickedFile = result.files.first;
+        _imagePath = _pickedFile!.path; // Utilisez le chemin du fichier sélectionné
+      });
+    } else {
+      print('Aucune image sélectionnée.');
+    }
+  } catch (e) {
+    print('Erreur lors de la sélection de l\'image: $e');
+  }
+}
   @override
   void dispose() {
     _nomController.dispose();
@@ -325,7 +359,6 @@ class _EditProductPageState extends State<EditProductPage> {
     super.dispose();
   }
 }
-
 class AddProductPage extends StatefulWidget {
   @override
   _AddProductPageState createState() => _AddProductPageState();
