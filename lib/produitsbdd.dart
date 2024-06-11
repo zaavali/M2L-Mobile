@@ -4,11 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'login.dart'; 
 import 'package:dio/dio.dart';
-
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-
-
 
 class Product {
   final String puid;
@@ -251,7 +248,7 @@ class _EditProductPageState extends State<EditProductPage> {
   late TextEditingController _prixController;
   late TextEditingController _quantiteController;
   String? _imagePath;
-  late PlatformFile? _pickedFile;
+  Uint8List? _pickedFileBytes;
 
   @override
   void initState() {
@@ -264,7 +261,26 @@ class _EditProductPageState extends State<EditProductPage> {
     _quantiteController =
         TextEditingController(text: widget.product.quantite.toString());
     _imagePath = widget.product.img;
-    _pickedFile = null;
+    _pickedFileBytes = null;
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _pickedFileBytes = result.files.first.bytes;
+          _imagePath = null; // Reset _imagePath as we are using bytes now
+        });
+      } else {
+        print('Aucune image sélectionnée.');
+      }
+    } catch (e) {
+      print('Erreur lors de la sélection de l\'image: $e');
+    }
   }
 
   @override
@@ -309,6 +325,13 @@ class _EditProductPageState extends State<EditProductPage> {
                   height: 200,
                   fit: BoxFit.cover,
                 ),
+              if (_pickedFileBytes != null)
+                Image.memory(
+                  _pickedFileBytes!,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                ),
               SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: () {
@@ -332,24 +355,6 @@ class _EditProductPageState extends State<EditProductPage> {
     );
   }
 
-Future<void> _pickImage() async {
-  try {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
-
-    if (result != null && result.files.isNotEmpty) {
-      setState(() {
-        _pickedFile = result.files.first;
-        _imagePath = _pickedFile!.path; // Utilisez le chemin du fichier sélectionné
-      });
-    } else {
-      print('Aucune image sélectionnée.');
-    }
-  } catch (e) {
-    print('Erreur lors de la sélection de l\'image: $e');
-  }
-}
   @override
   void dispose() {
     _nomController.dispose();
@@ -359,6 +364,7 @@ Future<void> _pickImage() async {
     super.dispose();
   }
 }
+
 class AddProductPage extends StatefulWidget {
   @override
   _AddProductPageState createState() => _AddProductPageState();
@@ -369,8 +375,7 @@ class _AddProductPageState extends State<AddProductPage> {
   late TextEditingController _descriptionController;
   late TextEditingController _prixController;
   late TextEditingController _quantiteController;
-  String? _imagePath;
-  late PlatformFile? _pickedFile;
+  Uint8List? _pickedFileBytes;
 
   @override
   void initState() {
@@ -379,8 +384,7 @@ class _AddProductPageState extends State<AddProductPage> {
     _descriptionController = TextEditingController();
     _prixController = TextEditingController();
     _quantiteController = TextEditingController();
-    _imagePath = null;
-    _pickedFile = null;
+    _pickedFileBytes = null;
   }
 
   Future<void> _pickImage() async {
@@ -391,7 +395,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
       if (result != null && result.files.isNotEmpty) {
         setState(() {
-          _pickedFile = result.files.first;
+          _pickedFileBytes = result.files.first.bytes;
         });
       } else {
         print('Aucune image sélectionnée.');
@@ -401,7 +405,7 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
- Future<void> _addProduct() async {
+  Future<void> _addProduct() async {
     final double? prix = double.tryParse(_prixController.text);
     final int? quantite = int.tryParse(_quantiteController.text);
 
@@ -411,16 +415,16 @@ class _AddProductPageState extends State<AddProductPage> {
     }
 
     try {
-      if (_pickedFile != null) {
-        String fileName = _pickedFile!.name;
-        List<int> fileBytes = _pickedFile!.bytes!; // Accéder à la propriété bytes
+      if (_pickedFileBytes != null) {
+        String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        List<int> fileBytes = _pickedFileBytes!;
 
         FormData formData = FormData.fromMap({
           'nom': _nomController.text,
           'description': _descriptionController.text,
           'prix': prix.toString(),
           'quantite': quantite.toString(),
-          'image': MultipartFile.fromBytes(fileBytes, filename: fileName), // Utiliser fromBytes avec les bytes
+          'image': MultipartFile.fromBytes(fileBytes, filename: fileName),
         });
 
         Response response = await Dio().post(
@@ -482,9 +486,14 @@ class _AddProductPageState extends State<AddProductPage> {
               onPressed: _addProduct,
               child: Text('Ajouter le produit'),
             ),
-            if (_pickedFile != null) ...[
+            if (_pickedFileBytes != null) ...[
               SizedBox(height: 16.0),
-              Text('Image sélectionnée : ${_pickedFile!.name}'),
+              Image.memory(
+                _pickedFileBytes!,
+                width: 200,
+                height: 200,
+                fit: BoxFit.cover,
+              ),
             ],
           ],
         ),
@@ -501,6 +510,7 @@ class _AddProductPageState extends State<AddProductPage> {
     super.dispose();
   }
 }
+
 class CustomNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -520,7 +530,7 @@ class _CustomNavBarState extends State<CustomNavBar> {
         if (index == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => LogoutPage()), // Naviguer vers la page de déconnexion
+            MaterialPageRoute(builder: (context) => LogoutPage()), 
           );
         } else {
           widget.onItemTapped(index);
@@ -550,10 +560,10 @@ class LogoutPage extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-           
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil( 
               context,
-              MaterialPageRoute(builder: (context) => Connection()), 
+              MaterialPageRoute(builder: (context) => Connection()),
+              (route) => false, 
             );
           },
           child: Text('Déconnexion'),
@@ -564,5 +574,5 @@ class LogoutPage extends StatelessWidget {
 }
 
 void main() {
-  runApp(MaterialApp());
+  runApp(MaterialApp(home: Prodbdd()));
 }

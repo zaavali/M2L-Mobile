@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'produitsbdd.dart'; // Import de Prodbdd.dart
+import 'produitsbdd.dart'; 
 
 class Admin extends StatefulWidget {
   final bool isAdmin;
@@ -15,17 +15,17 @@ class Admin extends StatefulWidget {
 
 class _AdminState extends State<Admin> {
   bool _loading = true;
-  List<Product> _products = []; // Liste des produits
+  List<Product> _products = []; 
 
   @override
   void initState() {
     super.initState();
     _fetchUsers();
-    _fetchProducts(); // Récupérer les produits lorsque la page est chargée
+    _fetchProducts(); 
   }
 
   void _fetchUsers() async {
-    // Logique pour récupérer les utilisateurs
+    
   }
 
   void _fetchProducts() async {
@@ -36,7 +36,7 @@ class _AdminState extends State<Admin> {
         final List<dynamic> data = json.decode(response.body);
         setState(() {
           _products = data.map((json) => Product.fromJson(json)).toList();
-          _loading = false; // Mettre _loading à false après avoir récupéré les produits
+          _loading = false; 
         });
       } else {
         throw Exception('Failed to load products');
@@ -55,13 +55,11 @@ class _AdminState extends State<Admin> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
-              itemCount: _products.length, // Utiliser la taille des produits
+              itemCount: _products.length,
               itemBuilder: (context, index) {
-                var product = _products[index]; // Récupérer un produit
+                var product = _products[index]; 
                 return ListTile(
-                  title: Text(product.nom), // Utiliser le nom du produit
-                  // subtitle: Text(product.description), // Utiliser la description du produit
-                  // Ajoutez d'autres éléments du produit ici selon vos besoins
+                  title: Text(product.nom), 
                 );
               },
             ),
